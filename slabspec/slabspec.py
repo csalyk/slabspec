@@ -100,7 +100,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     wmax : float, optional
         Maximum wavelength of output spectrum, in microns.  Defaults to 40 microns.
     deltav : float, optional
-        FWHM of local velocity distribution, in m/s.  Note this is NOT the global velocity distribution.
+        sigma of local velocity distribution, in m/s.  Note this is NOT the global velocity distribution.
         Defaults to thermal speed of molecule given input temperature.
     isotopologue_number : float, optional
         Number representing isotopologue (1=most common, 2=next most common, etc.)
@@ -248,7 +248,6 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
 
     mol_code=get_molecule_identifier(molecule_name)
     mol_isot_code=str(mol_code)+str(isotopologue_number)
-    print(mol_isot_code)
 
     switcher = {
               '11': qh2o(temp),                                                          #H2O
@@ -263,8 +262,11 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
               '111': 100.  #NH3 - not correct - placeholder!!
                }
 
-
-    q=switcher.get(mol_isot_code,"This molecule/isotopologue combination not covered yet.")
+    try:
+        testq = switcher[mol_isot_code]
+    except:
+        print("**Warning**: This molecule/isotopologue combination doesn't have a partition function yet.  Using q=100.")
+    q=switcher.get(mol_isot_code,100.)  #If partition function doesn't exist yet, set to 100 so program won't crash.
 
     return q
 

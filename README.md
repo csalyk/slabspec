@@ -17,7 +17,7 @@ compute_partition_function compute a partition function given a molecule, isotop
 
 spec_convol performs convolution of a spectrum given a spectrum and convolution FWHM 
 
-make_spec produces a spectrum with the desired attributes
+make_spec produces a model spectrum with the desired attributes
 
 ## Usage
 

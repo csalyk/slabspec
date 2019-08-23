@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 from slabspec.utils.helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, extract_hitran_data, get_molecule_identifier, compute_thermal_velocity
 import pdb as pdb
 from astropy.table import Table
+from astropy import units as un
 
 def spec_convol(wave, flux, dv):
     '''
@@ -122,9 +123,10 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     --------
     slabdict : dictionary
         Dictionary includes two astropy tables: 
-          lineparams : line parameters and fluxes
+          lineparams : line parameters from HITRAN, integrated line fluxes, peak tau
           spectrum : wavelength, flux, convolflux, tau
-        and a dictionary
+        and two dictionaries
+          lines : wave_arr (in microns), flux_arr (in mks), velocity (in km/s) - for plotting individual lines
           modelparams : model parameters: Area, column density, temperature, local velocity, convolution fwhm
     '''
 
@@ -191,7 +193,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
             totaltau[w]+=newtau
             f_arr[i,:]=2*h.value*c.value*wn0[i]**3./(np.exp(wnfactor[i])-1.0e0)*(1-np.exp(-tau[i,:]))*si2jy*omega
             lineflux_jykms=np.sum(f_arr[i,:])*dvel
-            lineflux[i]=lineflux_jykms*1e-23*1.*1e5*(1./(w0[i]*1e-4))
+            lineflux[i]=lineflux_jykms*1e-26*1.*1e5*(1./(w0[i]*1e-4))    #mks
 
     wave_arr=wave
     wn=1.e6/totalwave                                         #m^{-1}                                                     
@@ -211,8 +213,14 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     slabdict={}
 
 #Line params
+    hitran_data['lineflux']=lineflux
+    hitran_data['tau_peak']=tau0
+    hitran_data['fthin']=fthin
     slabdict['lineparams']=hitran_data
-#lineflux, flux_arr, wave_arr, vel?, tau0, fthin
+
+#Line flux array
+    lines={'flux_arr':f_arr , 'wave_arr':wave_arr , 'velocity':vel*1e-3}
+    slabdict['lines']=lines
 
 #Spectrum
     spectrum_table = Table([wave, flux, convolflux, totaltau], names=('wave', 'flux', 'convolflux','totaltau'),  dtype=('f8', 'f8', 'f8','f8'))
@@ -222,7 +230,10 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     slabdict['spectrum']=spectrum_table
 
 #Model params
-    modelparams_table={'area':area,'temp':temp,'n_col':n_col, 'res':res, 'deltav':deltav, 'convol_fwhm':convol_fwhm, 'd_pc':d_pc,
+    if(convol_fwhm is not None):
+        convol_fwhm=convol_fwhm*un.km/un.s
+    modelparams_table={'area':area*un.meter*un.meter,'temp':temp*un.K,'n_col':n_col/un.meter/un.meter, 'res':res*un.micron, 
+                       'deltav':deltav*un.meter/un.s, 'convol_fwhm':convol_fwhm, 'd_pc':d_pc*un.parsec,
                        'isotopologue_number':isot,'molecule_name':molecule_name}
     slabdict['modelparams']=modelparams_table
 

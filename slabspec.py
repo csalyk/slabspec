@@ -3,7 +3,7 @@ from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 import pickle as pickle
 from scipy.interpolate import interp1d
-from slabspec.utils.helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, extract_hitran_data, get_molecule_identifier, compute_thermal_velocity
+from .helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data
 import pdb as pdb
 from astropy.table import Table
 from astropy import units as un

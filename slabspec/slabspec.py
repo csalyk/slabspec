@@ -159,9 +159,11 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     phia=1./(deltav*np.sqrt(2.0*np.pi))
     tau0=afactor*np.exp(-1.*efactor)*(np.exp(wnfactor)-1.0)*phia
     w0=1.e6/wn0
-    dvel=1.0e0    #km/s                                                                                                   
-    nvel=101
-    vel=(dvel*(np.arange(0,nvel)-50.0))*1.e3     #now in m/s                                                              
+
+    dvel=0.1e0    #km/s
+    nvel=1001
+    vel=(dvel*(np.arange(0,nvel)-500.0))*1.e3     #now in m/s   
+
     omega=area/(d_pc*pc.value)**2.
     fthin=aup*gup*n_col*h.value*c.value*wn0/(q*4.*np.pi)*np.exp(-efactor)*omega # Energy/area/time, mks                   
 

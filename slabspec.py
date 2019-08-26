@@ -3,10 +3,13 @@ from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 import pickle as pickle
 from scipy.interpolate import interp1d
-from .helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data
+from .helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data,get_global_identifier
 import pdb as pdb
 from astropy.table import Table
 from astropy import units as un
+import os
+import urllib
+import pandas as pd
 
 def spec_convol(wave, flux, dv):
     '''
@@ -259,43 +262,17 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
       The partition function
     '''
 
-    mol_code=get_molecule_identifier(molecule_name)
-    mol_isot_code=str(mol_code)+str(isotopologue_number)
+    G=get_global_identifier(molecule_name, isotopologue_number=isotopologue_number)
+    qurl='https://hitran.org/data/Q/'+'q'+str(G)+'.txt'
+    handle = urllib.request.urlopen(qurl)
+    qdata = pd.read_csv(handle,sep=' ',skipinitialspace=True,names=['temp','q'],header=None)
 
-    switcher = {
-              '11': qh2o(temp),                                                          #H2O
-              '12': 175.11*(temp/296.)**1.5,
-              '21': -3.5179e+02 + 2.7793*temp -3.6737e-03*(temp**2.)+4.0901e-06*(temp**3.),  #CO2      
-              '51': 0.36288*temp*(1.+np.exp(-3083.7/temp)),                             #CO
-              '52': 6.212e-1+temp*7.5758e-1-(temp**2.)*5.9194e-6+(temp**3.)*1.5232e-08,
-              '261': 9.4384+temp*3.6148e-01+(temp**2.)*3.3278e-03-(temp**3.)*6.1666e-07, #C2H2 - not correct?!
-              '231': 9.4384+temp*3.6148e-01+(temp**2.)*3.3278e-03-(temp**3.)*6.1666e-07, #HCN - not correct?!
-              '131': qoh(temp),
-              '61': 100.,  #CH4 - not correct - placeholder!!
-              '111': 100.  #NH3 - not correct - placeholder!!
-               }
+#May want to add code with local file access
+#    pathmod=os.path.dirname(__file__)
+#    if not os.path.exists(qfilename):  #download data from internet
+       #get https://hitran.org/data/Q/qstr(G).txt
 
-    try:
-        testq = switcher[mol_isot_code]
-    except:
-        print("**Warning**: This molecule/isotopologue combination doesn't have a partition function yet.  Using q=100.")
-    q=switcher.get(mol_isot_code,100.)  #If partition function doesn't exist yet, set to 100 so program won't crash.
+    f=interp1d(qdata['temp'],qdata['q'])
+    q=f(temp)
 
-    return q
-
-
-def qh2o(temp):
-    qrot=-4.9589+2.8147e-1*temp+1.2848e-3*temp**2.-5.8343e-7*temp**3.
-    qvib=9.9842e-1+2.9713e-5*temp-1.7345e-7*(temp)**2.+3.2366e-10*(temp)**3.
-    if(temp > 1000):
-        qrot=-210. + 1.1911*temp #just a linear fit to qrot at high T to extend it to higher T                                        
-    q=qvib*qrot     
-    return q
-
-def qoh(temp):
-    qrot=7.7363+1.7152e-1*temp+3.4886e-4*temp**2.-3.3504e-7*temp**3.
-    qvib=9.9999e-1+2.0075e-7*temp-9.3665e-10*temp**2.+1.3295e-12*temp**3.
-    if(temp > 500):
-        qrot=temp*.28129676-2.3   #extrapolated from 100-450 K trend                                                                  
-    q=qvib*qrot
     return q

@@ -143,11 +143,17 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
 #Read HITRAN data
     hitran_data=extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin)
 
-#Select for desired vup
-#Probably want to add error catching here, since this code will only work if Vp is an integer
+#Select for desired vup if relevant
+    if(vup is not None):
+        try:
+            x=int(hitran_data['Vp'][0])
+        except ValueError:
+            print("Vp is not an integer, so the vup parameter cannot be used.  Ignoring this parameter.")
+            vup=None
     if(vup is not None):
         vupbool = [(int(myvp)==1) for myvp in hitran_data['Vp']]
         hitran_data=hitran_data[vupbool]
+
 
     wn0=hitran_data['wn']*1e2 # now m-1
     aup=hitran_data['a']
@@ -205,10 +211,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
 
     wave=totalwave
 
-#Make this its own function
-#    yrot=np.log(lineflux/(hitran_data.linecenter*gup*aup))  #y values for rotation diagrams                               
-
-    #convol should be set to FWHM of convolution kernel, in km/s                                                          
+    #convol_fwhm should be set to FWHM of convolution kernel, in km/s                                                          
     convolflux=np.copy(flux)
     if(convol_fwhm is not None):
         convolflux=spec_convol(wave,flux,convol_fwhm)
@@ -276,3 +279,7 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
     q=f(temp)
 
     return q
+
+
+#Make this its own function
+#    yrot=np.log(lineflux/(hitran_data.linecenter*gup*aup))  #y values for rotation diagrams                               

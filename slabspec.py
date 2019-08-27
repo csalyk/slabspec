@@ -282,4 +282,24 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
 
 
 #Make this its own function
-#    yrot=np.log(lineflux/(hitran_data.linecenter*gup*aup))  #y values for rotation diagrams                               
+def make_rotation_diagram(lineparams):
+    '''
+    Take ouput of make_spec and use it to compute rotation diagram parameters.
+
+    Parameters
+    ---------
+    lineparams: dictionary
+        dictionary output from make_spec
+
+    Returns
+    --------
+    rot_table: astropy Table
+        Table of x and y values for rotation diagram.  
+
+    '''
+    x=lineparams['eup_k']
+    y=np.log(lineparams['lineflux']/(lineparams['wn']*lineparams['gp']*lineparams['a']))
+    rot_table = Table([x, y], names=('x', 'y'),  dtype=('f8', 'f8'))
+    rot_table['x'].unit = 'K'        
+
+    return rot_table

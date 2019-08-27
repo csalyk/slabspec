@@ -37,6 +37,10 @@ out=make_spec('CO',1.e20,600.,(1*1.5e11)**2., wmin=4.5, wmax=5, d_pc=140.,
 
 out=make_spec('H2O',1.e20,600.,(1*1.5e11)**2., wmin=15, wmax=17, d_pc=140.,
               res=1.e-6)
+
+from slabspec import make_rotation_diagram
+rot=make_rotation_diagram(out['lineparams'])
+
 ```
 
 ## License

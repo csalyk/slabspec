@@ -6,7 +6,7 @@ Users are requested to let the developer know if they are using the code.  Code 
 tested for only a few use cases, and users utilize at their own risk.
 
 # Requirements
-Requires internet access to utilize astroquery.hitran
+Requires internet access to utilize astroquery.hitran and access HITRAN partition function files
 
 Requires the molmass and astropy packages
 
@@ -18,6 +18,8 @@ compute_partition_function compute a partition function given a molecule, isotop
 spec_convol performs convolution of a spectrum given a spectrum and convolution FWHM 
 
 make_spec produces a model spectrum with the desired attributes
+
+make_rotation_diagram computes abscissa and ordinate values for a rotation diagram, given make_spec lineparams output
 
 ## Usage
 

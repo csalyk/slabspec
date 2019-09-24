@@ -168,7 +168,10 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     efactor=h.value*c.value*eup/(k_B.value*temp)
     wnfactor=h.value*c.value*wn0/(k_B.value*temp)
     phia=1./(deltav*np.sqrt(2.0*np.pi))
-    tau0=afactor*np.exp(-1.*efactor)*(np.exp(wnfactor)-1.0)*phia
+    efactor2=hitran_data['eup_k']/temp
+    efactor1=hitran_data['elower']*1.e2*h.value*c.value/k_B.value/temp
+    tau0=afactor*(np.exp(-1.*efactor1)-np.exp(-1.*efactor2))*phia  #Avoids numerical issues at low T
+
     w0=1.e6/wn0
 
     dvel=0.1e0    #km/s
@@ -191,8 +194,11 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     w_arr=wave            #nlines x nvel                                                                                  
     f_arr=w_arr-w_arr     #nlines x nvel                                                                                  
     nbins=(wmax-wmin)/res
+#Create arrays to hold full spectrum (optical depth vs. wavelength)
     totalwave=np.arange(nbins)*(wmax-wmin)/nbins+wmin
     totaltau=np.zeros(np.size(totalwave))
+
+#Create array to hold line fluxes (one flux value per line)
     lineflux=np.zeros(nlines)
     for i in range(nlines):
         w=np.where((totalwave > np.min(wave[i,:])) & (totalwave < np.max(wave[i,:])))

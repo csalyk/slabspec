@@ -10,6 +10,78 @@ from astropy import units as un
 import os
 import urllib
 import pandas as pd
+from astropy.convolution import Gaussian1DKernel, convolve
+
+def spec_convol_klaus(wave,flux,R):
+    '''
+    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity 
+
+    Parameters
+    ---------
+    wave : numpy array
+        wavelength values, in microns
+    flux : numpy array
+        flux density values, in units of Energy/area/time/Hz
+    R : float
+        Resolving power (lambda / dlambda)
+
+    Returns
+    --------
+    newflux : numpy array
+        Convolved spectrum flux density values, in same units as input
+
+    '''                                 
+    # find the minimum spacing between wavelengths in the dataset
+    dws = np.abs(wave - np.roll(wave, 1))
+    dw_min = np.min(dws)   #Minimum delta-wavelength between points in dataset
+
+    fwhm = wave / R  # FWHM of resolution element as a function of wavelength ("delta lambda" in same units as wave)
+    #fwhm / dw_min gives FWHM values expressed in units of minimum spacing, or the sampling for each wavelength
+    #(sampling is sort of the number of data points per FWHM)
+    #The sampling is different for each point in the wavelength array, because the FWHM is wavelength dependent
+    #fwhm_s then gives the minimum value of the sampling - the most poorly sampled wavelength.
+    fwhm_s = np.min(fwhm / dw_min)  # find mininumvalue of sampling for this dataset
+    # but do not allow the sampling FWHM to be less than Nyquist
+    # (i.e., make sure there are at least two points per resolution element)
+    fwhm_s = np.max([2., fwhm_s])  #Will return 2 only if fwhm_s is less than 2
+    #If you want all wavelengths to have the same sampling per resolution element, 
+    #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)
+    ds = fwhm / fwhm_s
+    # use the min wavelength as a starting point
+    w = np.min(wave)
+    #Initialize array to hold new wavelength values
+    #Note: it's much faster (~50%) to append to lists than np.array()'s
+    wave_constfwhm = []
+
+
+    # doing this as a loop is slow, but straightforward.
+    while w < np.max(wave):
+        # use interpolation to get delta-wavelength from the sampling as a function of wavelength.
+        # this method is over 5x faster than the original use of scipy.interpolate.interp1d.
+        w += np.interp(w,wave,ds)  #Get value of ds at w, then add to old value of w
+        wave_constfwhm.append(w)
+
+    wave_constfwhm.pop()  # remove last point which is an extrapolation
+    wave_constfwhm = np.array(wave_constfwhm)  #Convert list to numpy array
+    
+    # interpolate the flux onto the new wavelength set
+    flux_constfwhm = np.interp(wave_constfwhm,wave,flux)
+
+    # convolve the flux with a gaussian kernel; first convert the FWHM to sigma
+    sigma_s = fwhm_s / 2.3548
+    try:
+        # for astropy < 0.4
+        g = Gaussian1DKernel(width=sigma_s)
+    except TypeError:
+        # for astropy >= 0.4
+        g = Gaussian1DKernel(sigma_s)
+    # use boundary='extend' to set values outside the array to nearest array value.
+    # this is the best approximation in this case.
+    flux_conv = convolve(flux_constfwhm, g, normalize_kernel=True, boundary='extend')
+    flux_oldsampling = np.interp(wave, wave_constfwhm, flux_conv)
+
+    return flux_oldsampling
+
 
 def spec_convol(wave, flux, dv):
     '''
@@ -67,8 +139,7 @@ def spec_convol(wave, flux, dv):
         vel=np.arange(nvel)
         vel=.2*dv*(vel-np.median(vel))
         kernel=markgauss(vel,mean=0,sigma=dv,area=1.)
-        f = interp1d(vel,kernel, bounds_error=False)
-        wkernel=f(lvel)
+        wkernel=np.interp(lvel,vel,kernel)   #numpy interp is almost factor of 2 faster than interp1d
         wkernel=wkernel/np.nansum(wkernel)
         newflux[np.int(i)]=np.nansum(lflux*wkernel)/np.nansum(wkernel[np.isfinite(lflux)])
         #Note: denominator is necessary to correctly account for NaN'd regions                                            
@@ -203,8 +274,9 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     for i in range(nlines):
         w=np.where((totalwave > np.min(wave[i,:])) & (totalwave < np.max(wave[i,:])))
         if(np.size(w) > 0):
-            f = interp1d(wave[i,:], tau[i,:],bounds_error=False)
-            newtau=f(totalwave[w])
+#            f = interp1d(wave[i,:], tau[i,:],bounds_error=False)
+#            newtau=f(totalwave[w])
+            newtau=np.interp(totalwave[w],wave[i,:], tau[i,:])
             totaltau[w]+=newtau
             f_arr[i,:]=2*h.value*c.value*wn0[i]**3./(np.exp(wnfactor[i])-1.0e0)*(1-np.exp(-tau[i,:]))*si2jy*omega
             lineflux_jykms=np.sum(f_arr[i,:])*dvel
@@ -281,9 +353,10 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
 #    if not os.path.exists(qfilename):  #download data from internet
        #get https://hitran.org/data/Q/qstr(G).txt
 
-    f=interp1d(qdata['temp'],qdata['q'])
-    q=f(temp)
+#    f=interp1d(qdata['temp'],qdata['q'])
+#    q=f(temp)
 
+    q=np.interp(temp,qdata['temp'],qdata['q'])
     return q
 
 

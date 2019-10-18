@@ -2,7 +2,6 @@ import numpy as np
 from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 import pickle as pickle
-from scipy.interpolate import interp1d
 from .helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data,get_global_identifier
 import pdb as pdb
 from astropy.table import Table
@@ -274,8 +273,6 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     for i in range(nlines):
         w=np.where((totalwave > np.min(wave[i,:])) & (totalwave < np.max(wave[i,:])))
         if(np.size(w) > 0):
-#            f = interp1d(wave[i,:], tau[i,:],bounds_error=False)
-#            newtau=f(totalwave[w])
             newtau=np.interp(totalwave[w],wave[i,:], tau[i,:])
             totaltau[w]+=newtau
             f_arr[i,:]=2*h.value*c.value*wn0[i]**3./(np.exp(wnfactor[i])-1.0e0)*(1-np.exp(-tau[i,:]))*si2jy*omega
@@ -352,9 +349,6 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
 #    pathmod=os.path.dirname(__file__)
 #    if not os.path.exists(qfilename):  #download data from internet
        #get https://hitran.org/data/Q/qstr(G).txt
-
-#    f=interp1d(qdata['temp'],qdata['q'])
-#    q=f(temp)
 
     q=np.interp(temp,qdata['temp'],qdata['q'])
     return q

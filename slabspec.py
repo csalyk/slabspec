@@ -155,7 +155,7 @@ def spec_convol(wave, flux, dv):
 
 #------------------------------------------------------------------------------------                                     
 def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, deltav=None, isotopologue_number=1, d_pc=1,
-              aupmin=None, convol_fwhm=None, eupmax=None, vup=None):
+              aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None):
 
     '''
     Create an IR spectrum for a slab model with given temperature, area, and column density
@@ -183,6 +183,8 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
         Distance to slab, in units of pc, for computing observed flux density.  Defaults to 1 pc.
     aupmin : float, optional
         Minimum Einstein-A coefficient for transitions
+    swmin : float, optional
+        Minimum line strength for transitions
     convol_fwhm : float, optional
         FWHM of convolution kernel, in km/s.
     res : float, optional
@@ -212,7 +214,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
         deltav=compute_thermal_velocity(molecule_name, temp)
 
 #Read HITRAN data
-    hitran_data=extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin)
+    hitran_data=extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin, swmin=swmin)
 
 #Select for desired vup if relevant
     if(vup is not None):

@@ -4,11 +4,11 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="slabspec",
+    name="flux_calculator",
     version="0.0.1",
     author="Colette Salyk",
     author_email="cosalyk@vassar.edu",
-    description="A package to create infrared spectra using the HITRAN database",
+    description="A package to perform line fits for IR spectroscopic data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),

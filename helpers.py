@@ -3,6 +3,7 @@ from astroquery.hitran import Hitran
 from astropy import units as un
 from astropy.constants import c, k_B, h, u
 from molmass import Formula
+import pdb as pdb
 
 def compute_thermal_velocity(molecule_name, temp):
     '''
@@ -104,7 +105,7 @@ def wn_to_k(wn):
     '''              
     return wn.si*h*c/k_B
 
-def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None):
+def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None,swmin=None):
     '''                                                               
     Extract data from HITRAN 
     Primarily makes use of astroquery.hitran, with some added functionality specific to common IR spectral applications
@@ -122,6 +123,8 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
         Maximum extracted upper level energy (in Kelvin)
     aupmin : float, optional
         Minimum extracted Einstein A coefficient
+    swmin : float, optional
+        Minimum extracted line strength
     Returns
     ------- 
     hitran_data : astropy table
@@ -151,14 +154,18 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
     #Extract desired portion of dataset
     ebool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     abool = np.full(np.size(tbl), True, dtype=bool)  #default to True
+    swbool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     #Upper level energy
     if(eupmax is not None):
         ebool = tbl['eup_k'] < eupmax
     #Upper level A coeff
     if(aupmin is not None):
         abool = tbl['a'] > aupmin
+    #Line strength
+    if(swmin is not None):
+        swbool = tbl['sw'] > swmin
      #Combine
-    extractbool = (abool & ebool)
+    extractbool = (abool & ebool & swbool)
     hitran_data=tbl[extractbool]
 
     #Return astropy table

@@ -19,7 +19,7 @@ def compute_thermal_velocity(molecule_name, temp):
     Returns
     -------
     v_thermal : float
-       Thermal velocity
+       Thermal velocity (m/s)
     '''
 
     f=Formula(molecule_name)

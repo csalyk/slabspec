@@ -1,4 +1,6 @@
 # slabspec
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4037306.svg)](https://doi.org/10.5281/zenodo.4037306)
+
 slabspec is a set of python codes to produce LTE slab model spectra using the HITRAN database.  Code
 is created with infrared medium/high-resolution spectroscopy in mind.  
 

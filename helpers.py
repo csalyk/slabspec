@@ -103,8 +103,7 @@ def wn_to_k(wn):
        Energy of photon with given wavenumber
 
     '''              
-    wn=wn.to(1/un.m)
-    return wn*h*c/k_B
+    return wn.to(1/un.m)*h*c/k_B
 
 def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None,swmin=None):
     '''                                                               

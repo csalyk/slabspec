@@ -147,6 +147,9 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
     tbl['nu']=tbl['wn']*c.cgs.value   #Now actually frequency of transition
     tbl['eup_k']=(wn_to_k((tbl['wn']+tbl['elower'])/un.cm)).value
 
+    print(tbl['wn']+tbl['elower'])
+    print(wn_to_k((tbl['wn']+tbl['elower'])/un.cm))
+
     tbl['wave']=1.e4/tbl['wn']       #Wavelength of transition, in microns
     tbl.rename_column('global_upper_quanta','Vp')
     tbl.rename_column('global_lower_quanta','Vpp')

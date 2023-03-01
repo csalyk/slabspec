@@ -13,7 +13,7 @@ from astropy.convolution import Gaussian1DKernel, convolve
 
 def spec_convol_klaus(wave,flux,R):
     '''
-    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity 
+    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity
 
     Parameters
     ---------
@@ -29,7 +29,7 @@ def spec_convol_klaus(wave,flux,R):
     newflux : numpy array
         Convolved spectrum flux density values, in same units as input
 
-    '''                                 
+    '''
     # find the minimum spacing between wavelengths in the dataset
     dws = np.abs(wave - np.roll(wave, 1))
     dw_min = np.min(dws)   #Minimum delta-wavelength between points in dataset
@@ -43,7 +43,7 @@ def spec_convol_klaus(wave,flux,R):
     # but do not allow the sampling FWHM to be less than Nyquist
     # (i.e., make sure there are at least two points per resolution element)
     fwhm_s = np.max([2., fwhm_s])  #Will return 2 only if fwhm_s is less than 2
-    #If you want all wavelengths to have the same sampling per resolution element, 
+    #If you want all wavelengths to have the same sampling per resolution element,
     #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)
     ds = fwhm / fwhm_s
     # use the min wavelength as a starting point
@@ -62,7 +62,7 @@ def spec_convol_klaus(wave,flux,R):
 
     wave_constfwhm.pop()  # remove last point which is an extrapolation
     wave_constfwhm = np.array(wave_constfwhm)  #Convert list to numpy array
-    
+
     # interpolate the flux onto the new wavelength set
     flux_constfwhm = np.interp(wave_constfwhm,wave,flux)
 
@@ -84,7 +84,7 @@ def spec_convol_klaus(wave,flux,R):
 
 def spec_convol(wave, flux, dv):
     '''
-    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity 
+    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity
 
     Parameters
     ---------
@@ -102,14 +102,14 @@ def spec_convol(wave, flux, dv):
 
     '''
 
-#Program assumes units of dv are km/s, and dv=FWHM                                                                        
+#Program assumes units of dv are km/s, and dv=FWHM
 
     dv=fwhm_to_sigma(dv)
     n=round(4.*dv/(c.value*1e-3)*np.median(wave)/(wave[1]-wave[0]))
     if (n < 10):
         n=10.
 
-#Pad arrays to deal with edges                                                                                            
+#Pad arrays to deal with edges
     dwave=wave[1]-wave[0]
     wave_low=np.arange(wave[0]-dwave*n, wave[0]-dwave, dwave)
     wave_high=np.arange(np.max(wave)+dwave, np.max(wave)+dwave*(n-1.), dwave)
@@ -141,18 +141,18 @@ def spec_convol(wave, flux, dv):
         wkernel=np.interp(lvel,vel,kernel)   #numpy interp is almost factor of 2 faster than interp1d
         wkernel=wkernel/np.nansum(wkernel)
         newflux[np.int(i)]=np.nansum(lflux*wkernel)/np.nansum(wkernel[np.isfinite(lflux)])
-        #Note: denominator is necessary to correctly account for NaN'd regions                                            
+        #Note: denominator is necessary to correctly account for NaN'd regions
 
-#Remove NaN'd regions                                                                                                     
-    nanbool=np.invert(np.isfinite(flux))   #Places where flux is not finite                                               
+#Remove NaN'd regions
+    nanbool=np.invert(np.isfinite(flux))   #Places where flux is not finite
     newflux[nanbool]='NaN'
 
-#Now remove padding                                                                                                       
+#Now remove padding
     newflux=newflux[mask==1]
 
     return newflux
 
-#------------------------------------------------------------------------------------                                     
+#------------------------------------------------------------------------------------
 def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, deltav=None, isotopologue_number=1, d_pc=1,
               aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None):
 
@@ -162,7 +162,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     Parameters
     ---------
     molecule_name : string
-        String identifier for molecule, for example, 'CO', or 'H2O'             
+        String identifier for molecule, for example, 'CO', or 'H2O'
     n_col : float
         Column density, in m^-2
     temp : float
@@ -197,7 +197,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     Returns
     --------
     slabdict : dictionary
-        Dictionary includes two astropy tables: 
+        Dictionary includes two astropy tables:
           lineparams : line parameters from HITRAN, integrated line fluxes, peak tau
           spectrum : wavelength, flux, convolflux, tau
         and two dictionaries
@@ -227,14 +227,14 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
 
     wn0=hitran_data['wn']*1e2 # now m-1
     aup=hitran_data['a']
-    eup=(hitran_data['elower']+hitran_data['wn'])*1e2 #now m-1                                                             
+    eup=(hitran_data['elower']+hitran_data['wn'])*1e2 #now m-1
     gup=hitran_data['gp']
 
 #Compute partition function
     q=compute_partition_function(molecule_name,temp,isot)
-    
-#Begin calculations                                                                                                       
-    afactor=((aup*gup*n_col)/(q*8.*np.pi*(wn0)**3.)) #mks                                                                 
+
+#Begin calculations
+    afactor=((aup*gup*n_col)/(q*8.*np.pi*(wn0)**3.)) #mks
     efactor=h.value*c.value*eup/(k_B.value*temp)
     wnfactor=h.value*c.value*wn0/(k_B.value*temp)
     phia=1./(deltav*np.sqrt(2.0*np.pi))
@@ -245,22 +245,21 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
 
     dvel=0.1e0    #km/s
     nvel=1001
-    vel=(dvel*(np.arange(0,nvel)-500.0))*1.e3     #now in m/s   
+    vel=(dvel*(np.arange(0,nvel)-500.0))*1.e3     #now in m/s
 
     omega=area/(d_pc*pc.value)**2.
-    fthin=aup*gup*n_col*h.value*c.value*wn0/(q*4.*np.pi)*np.exp(-efactor)*omega # Energy/area/time, mks                   
+    fthin=aup*gup*n_col*h.value*c.value*wn0/(q*4.*np.pi)*np.exp(-efactor)*omega # Energy/area/time, mks
 
-#Now loop over transitions and velocities to calculate flux                                                               
+#Now loop over transitions and velocities to calculate flux
     nlines=np.size(tau0)
     tau=np.zeros([nlines,nvel])
     wave=np.zeros([nlines,nvel])
     for ha,mytau in enumerate(tau0):
-        for ka, myvel in enumerate(vel):
-            tau[ha,ka]=tau0[ha]*np.exp(-vel[ka]**2./(2.*deltav**2.))
-            wave[ha,ka]=1.e6/wn0[ha]*(1+vel[ka]/c.value)
-#Now interpolate over wavelength space so that all lines can be added together                                            
-    w_arr=wave            #nlines x nvel                                                                                  
-    f_arr=w_arr-w_arr     #nlines x nvel                                                                                  
+        tau[ha,:]=tau0[ha]*np.exp(-vel**2./(2.*deltav**2.))
+        wave[ha,:]=1.e6/wn0[ha]*(1+vel/c.value)
+#Now interpolate over wavelength space so that all lines can be added together
+    w_arr=wave            #nlines x nvel
+    f_arr=w_arr-w_arr     #nlines x nvel
     nbins=(wmax-wmin)/res
 #Create arrays to hold full spectrum (optical depth vs. wavelength)
     totalwave=np.arange(nbins)*(wmax-wmin)/nbins+wmin
@@ -278,12 +277,12 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
             lineflux[i]=lineflux_jykms*1e-26*1.*1e5*(1./(w0[i]*1e-4))    #mks
 
     wave_arr=wave
-    wn=1.e6/totalwave                                         #m^{-1}                                                     
+    wn=1.e6/totalwave                                         #m^{-1}
     wnfactor=h.value*c.value*wn/(k_B.value*temp)
     flux=2*h.value*c.value*wn**3./(np.exp(wnfactor)-1.0e0)*(1-np.exp(-totaltau))*si2jy*omega
 
     wave=totalwave
-    #convol_fwhm should be set to FWHM of convolution kernel, in km/s                                                          
+    #convol_fwhm should be set to FWHM of convolution kernel, in km/s
     convolflux=np.copy(flux)
     if(convol_fwhm is not None):
         convolflux=spec_convol(wave,flux,convol_fwhm)
@@ -310,7 +309,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
 #Model params
     if(convol_fwhm is not None):
         convol_fwhm=convol_fwhm*un.km/un.s
-    modelparams_table={'area':area*un.meter*un.meter,'temp':temp*un.K,'n_col':n_col/un.meter/un.meter, 'res':res*un.micron, 
+    modelparams_table={'area':area*un.meter*un.meter,'temp':temp*un.K,'n_col':n_col/un.meter/un.meter, 'res':res*un.micron,
                        'deltav':deltav*un.meter/un.s, 'convol_fwhm':convol_fwhm, 'd_pc':d_pc*un.parsec,
                        'isotopologue_number':isot,'molecule_name':molecule_name}
     slabdict['modelparams']=modelparams_table
@@ -319,11 +318,11 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
 
 
 def compute_partition_function(molecule_name,temp,isotopologue_number=1):
-    '''                                                                                                                                       
+    '''
     For a given input molecule name, isotope number, and temperature, return the partition function Q
-                                                                                                                                              
-    Parameters                                                                                                                                
-    ----------                                                                                                                                
+
+    Parameters
+    ----------
     molecule_name : string
         The molecule name string (e.g., 'CO', 'H2O')
     temp : float
@@ -331,8 +330,8 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
     isotopologue_number : float, optional
         Isotopologue number, with 1 being most common, etc. Defaults to 1.
 
-    Returns                                                                                                                                   
-    -------                                                                                                                                   
+    Returns
+    -------
     q : float
       The partition function
     '''
@@ -364,12 +363,12 @@ def make_rotation_diagram(lineparams):
     Returns
     --------
     rot_table: astropy Table
-        Table of x and y values for rotation diagram.  
+        Table of x and y values for rotation diagram.
 
     '''
     x=lineparams['eup_k']
     y=np.log(lineparams['lineflux']/(lineparams['wn']*lineparams['gp']*lineparams['a']))
     rot_table = Table([x, y], names=('x', 'y'),  dtype=('f8', 'f8'))
-    rot_table['x'].unit = 'K'        
+    rot_table['x'].unit = 'K'
 
     return rot_table

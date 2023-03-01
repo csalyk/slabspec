@@ -11,7 +11,7 @@ setuptools.setup(
     description="A package to calculate molecular slab models for IR spectroscopic data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=setuptools.find_packages(),
+    packages=['slabspec'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

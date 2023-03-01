@@ -9,7 +9,7 @@ from astropy import units as un
 from astropy.convolution import Gaussian1DKernel, convolve
 import pandas as pd
 
-from helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data,get_global_identifier
+from slabspec.helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data,get_global_identifier
 
 def spec_convol_klaus(wave,flux,R):
     '''

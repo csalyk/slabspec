@@ -13,7 +13,7 @@ from slabspec.helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_th
 
 def spec_convol_klaus(wave,flux,R):
     '''
-    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity
+    Convolve a spectrum, given wavelength in microns and flux density, by a given resolving power
 
     Parameters
     ---------
@@ -46,19 +46,21 @@ def spec_convol_klaus(wave,flux,R):
     #If you want all wavelengths to have the same sampling per resolution element,
     #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)
     ds = fwhm / fwhm_s
+
     # use the min wavelength as a starting point
     w = np.min(wave)
     #Initialize array to hold new wavelength values
     #Note: it's much faster (~50%) to append to lists than np.array()'s
     wave_constfwhm = []
 
-
     # doing this as a loop is slow, but straightforward.
+
     while w < np.max(wave):
         # use interpolation to get delta-wavelength from the sampling as a function of wavelength.
         # this method is over 5x faster than the original use of scipy.interpolate.interp1d.
         w += np.interp(w,wave,ds)  #Get value of ds at w, then add to old value of w
         wave_constfwhm.append(w)
+        print(w)
 
     wave_constfwhm.pop()  # remove last point which is an extrapolation
     wave_constfwhm = np.array(wave_constfwhm)  #Convert list to numpy array
@@ -261,12 +263,12 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     #Interpolate over wavelength space so that all lines can be added together
     w_arr = wave            #nlines x nvel
     f_arr = w_arr-w_arr     #nlines x nvel
-    nbins = (wmax-wmin)/res
+    nbins = int((wmax-wmin)/res)
 
     #Create arrays to hold full spectrum (optical depth vs. wavelength)
-    totalwave = np.arange(nbins)*(wmax-wmin)/nbins+wmin
+    totalwave = np.linspace(wmin,wmax,nbins)
     totaltau = np.zeros(np.size(totalwave))
-
+    breakpoint()
     #Create array to hold line fluxes (one flux value per line)
     lineflux = np.zeros(nlines)
     for i in range(nlines):
@@ -288,7 +290,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     #convol_fwhm should be set to FWHM of convolution kernel, in km/s
     convolflux = np.copy(flux)
     if(convol_fwhm is not None):
-        convolflux = spec_convol(wave,flux,convol_fwhm)
+        convolflux = spec_convol_klaus(wave,flux,convol_fwhm)
 
     slabdict = {}
 

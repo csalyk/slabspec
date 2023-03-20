@@ -255,7 +255,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
     efactor1 = hitran_data['elower']*1.e2*h.value*c.value/k_B.value/temp
     tau0 = afactor*(np.exp(-1.*efactor1)-np.exp(-1.*efactor2))*phia  #Avoids numerical issues at low T
     w0 = 1.e6/wn0
-
+    breakpoint()
     dvel = deltav/oversamp    #m/s
     nvel = 10*oversamp+1 #5 sigma window
     vel = (dvel*(np.arange(0,nvel)-(nvel-1)/2))
@@ -339,7 +339,35 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
                          'isotopologue_number':isot,'molecule_name':molecule_name}
     slabdict['modelparams'] = modelparams_table
 
+    #Line-by-line data
+    hitran_data['tau0'] = tau0
+    hitran_data['lineflux'] = lineflux
+    slabdict['moldata'] = hitran_data
+
     return slabdict
+
+def write_slab(slabdict,filename='slabmodel.fits'):
+    wave = slabdict['spectrum']['wave']
+    flux = slabdict['spectrum']['convolflux']
+
+    c1 = fits.Column(name='wave', array=wave, format='F')
+    c2 = fits.Column(name='flux', array=flux, format='F')
+    t1 = fits.BinTableHDU.from_columns([c1, c2])
+
+    moldata = slabdict['moldata']
+    mol_cols = []
+    for key in moldata.keys():
+        try:
+            mol_cols.append(fits.Column(name=key,array=moldata[key],format='F'))
+        except:
+            mol_cols.append(fits.Column(name=key,array=moldata[key],format='A'))
+    t2 = fits.BinTableHDU.from_columns(mol_cols)
+
+    primary = fits.PrimaryHDU()
+    hdulist = fits.HDUList([primary,t1,t2])
+
+    hdulist.writeto(filename,overwrite=True)
+
 
 
 def compute_partition_function(molecule_name,temp,isotopologue_number=1):

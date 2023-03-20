@@ -2,16 +2,18 @@ import os
 import urllib
 import pickle as pickle
 import numpy as np
+import matplotlib.pylab as plt
+from scipy.interpolate import interp1d
 from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 from astropy.table import Table
 from astropy import units as un
-from astropy.convolution import Gaussian1DKernel, convolve
+from astropy.convolution import Gaussian1DKernel, convolve_fft
 import pandas as pd
 
 from slabspec.helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data,get_global_identifier
 
-def spec_convol_klaus(wave,flux,R):
+def spec_convol(wave,flux,dv):
     '''
     Convolve a spectrum, given wavelength in microns and flux density, by a given resolving power
 
@@ -21,8 +23,8 @@ def spec_convol_klaus(wave,flux,R):
         wavelength values, in microns
     flux : numpy array
         flux density values, in units of Energy/area/time/Hz
-    R : float
-        Resolving power (lambda / dlambda)
+    dv : float
+        Resolving power in km/s
 
     Returns
     --------
@@ -30,6 +32,7 @@ def spec_convol_klaus(wave,flux,R):
         Convolved spectrum flux density values, in same units as input
 
     '''
+    R = c.value/(dv*1e3) #input dv in km/s, convert to m/s
     # find the minimum spacing between wavelengths in the dataset
     dws = np.abs(wave - np.roll(wave, 1))
     dw_min = np.min(dws)   #Minimum delta-wavelength between points in dataset
@@ -47,14 +50,17 @@ def spec_convol_klaus(wave,flux,R):
     #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)
     ds = fwhm / fwhm_s
 
+    wave_constfwhm = np.cumsum(ds)+np.min(wave)
+
+    '''
     # use the min wavelength as a starting point
     w = np.min(wave)
+
     #Initialize array to hold new wavelength values
     #Note: it's much faster (~50%) to append to lists than np.array()'s
     wave_constfwhm = []
 
     # doing this as a loop is slow, but straightforward.
-
     while w < np.max(wave):
         # use interpolation to get delta-wavelength from the sampling as a function of wavelength.
         # this method is over 5x faster than the original use of scipy.interpolate.interp1d.
@@ -64,6 +70,7 @@ def spec_convol_klaus(wave,flux,R):
 
     wave_constfwhm.pop()  # remove last point which is an extrapolation
     wave_constfwhm = np.array(wave_constfwhm)  #Convert list to numpy array
+    '''
 
     # interpolate the flux onto the new wavelength set
     flux_constfwhm = np.interp(wave_constfwhm,wave,flux)
@@ -78,13 +85,13 @@ def spec_convol_klaus(wave,flux,R):
         g = Gaussian1DKernel(sigma_s)
     # use boundary='extend' to set values outside the array to nearest array value.
     # this is the best approximation in this case.
-    flux_conv = convolve(flux_constfwhm, g, normalize_kernel=True, boundary='extend')
+    flux_conv = convolve_fft(flux_constfwhm, g, normalize_kernel=True, boundary='fill')
     flux_oldsampling = np.interp(wave, wave_constfwhm, flux_conv)
 
     return flux_oldsampling
 
 
-def spec_convol(wave, flux, dv):
+def spec_convol_colette(wave, flux, dv):
     '''
     Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity
 
@@ -154,7 +161,7 @@ def spec_convol(wave, flux, dv):
     return newflux
 
 #------------------------------------------------------------------------------------
-def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, deltav=None, isotopologue_number=1, d_pc=1,
+def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, isotopologue_number=1, d_pc=1,
               aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None):
 
     '''
@@ -205,12 +212,16 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
           lines : wave_arr (in microns), flux_arr (in mks), velocity (in km/s) - for plotting individual lines
           modelparams : model parameters: Area, column density, temperature, local velocity, convolution fwhm
     '''
+    oversamp = 3
     isot = isotopologue_number
     si2jy = 1e26   #SI to Jy flux conversion factor
 
     #If local velocity field is not given, assume sigma given by thermal velocity
     if(deltav is None):
         deltav = compute_thermal_velocity(molecule_name, temp)
+
+    #Internal resolving power needed to resolve deltav
+    res = oversamp*c.value/deltav
 
     #Read HITRAN data
     hitran_data = extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin, swmin=swmin)
@@ -245,9 +256,9 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     tau0 = afactor*(np.exp(-1.*efactor1)-np.exp(-1.*efactor2))*phia  #Avoids numerical issues at low T
     w0 = 1.e6/wn0
 
-    dvel = 0.1e0    #km/s
-    nvel = 1001
-    vel = (dvel*(np.arange(0,nvel)-500.0))*1.e3     #now in m/s
+    dvel = deltav/oversamp    #m/s
+    nvel = 10*oversamp+1 #5 sigma window
+    vel = (dvel*(np.arange(0,nvel)-(nvel-1)/2))
 
     omega = area/(d_pc*pc.value)**2.
     fthin = aup*gup*n_col*h.value*c.value*wn0/(q*4.*np.pi)*np.exp(-efactor)*omega # Energy/area/time, mks
@@ -263,17 +274,26 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     #Interpolate over wavelength space so that all lines can be added together
     w_arr = wave            #nlines x nvel
     f_arr = w_arr-w_arr     #nlines x nvel
-    nbins = int((wmax-wmin)/res)
+    nbins = int(oversamp*wmax/(wmax-wmin)*(c.value/deltav))
 
     #Create arrays to hold full spectrum (optical depth vs. wavelength)
-    totalwave = np.linspace(wmin,wmax,nbins)
-    totaltau = np.zeros(np.size(totalwave))
-    breakpoint()
+    totalwave = np.logspace(np.log10(wmin),np.log10(wmax),nbins)
+    totaltau = np.zeros(nbins)
+
     #Create array to hold line fluxes (one flux value per line)
     lineflux = np.zeros(nlines)
+    totalwave_index = np.arange(totalwave.size)
+    index_interp = interp1d(totalwave,totalwave_index)
     for i in range(nlines):
-        w = np.where((totalwave > np.min(wave[i,:])) & (totalwave < np.max(wave[i,:])))
-        if(np.size(w) > 0):
+
+        minw = np.min(wave[i,:])
+        maxw = np.max(wave[i,:])
+        minindex = int(index_interp(minw))
+        maxindex = int(index_interp(maxw))
+
+        w = np.arange(minindex,maxindex)
+
+        if(w.size > 0):
             newtau = np.interp(totalwave[w],wave[i,:], tau[i,:])
             totaltau[w] += newtau
             f_arr[i,:] = 2*h.value*c.value*wn0[i]**3./(np.exp(wnfactor[i])-1.0e0)*(1-np.exp(-tau[i,:]))*si2jy*omega
@@ -290,7 +310,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     #convol_fwhm should be set to FWHM of convolution kernel, in km/s
     convolflux = np.copy(flux)
     if(convol_fwhm is not None):
-        convolflux = spec_convol_klaus(wave,flux,convol_fwhm)
+        convolflux = spec_convol(wave,flux,convol_fwhm)
 
     slabdict = {}
 

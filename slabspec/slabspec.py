@@ -255,7 +255,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
     efactor1 = hitran_data['elower']*1.e2*h.value*c.value/k_B.value/temp
     tau0 = afactor*(np.exp(-1.*efactor1)-np.exp(-1.*efactor2))*phia  #Avoids numerical issues at low T
     w0 = 1.e6/wn0
-    breakpoint()
+
     dvel = deltav/oversamp    #m/s
     nvel = 10*oversamp+1 #5 sigma window
     vel = (dvel*(np.arange(0,nvel)-(nvel-1)/2))
